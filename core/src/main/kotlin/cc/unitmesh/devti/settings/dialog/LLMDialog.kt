@@ -89,13 +89,19 @@ class LLMDialog(
             } ?: "0.0"
             temperatureField.text = temperatureValue
 
+            var isYyModel = existingLlm.url.endsWith("iuap-aip-service/report/rest/api/aiService/chat")
+
             // Initialize response resolver - use legacy responseFormat if available, otherwise determine by stream
             val responseResolver = if (existingLlm.responseFormat.isNotEmpty()) {
                 existingLlm.responseFormat
             } else {
                 // Default based on streaming mode
                 if (existingLlm.customRequest.stream) {
-                    "\$.choices[0].delta.content"
+                    if (isYyModel) {
+                       "\$.result"
+                    } else{
+                        "\$.choices[0].delta.content"
+                    }
                 } else {
                     "\$.choices[0].message.content"
                 }
@@ -116,7 +122,11 @@ class LLMDialog(
 
             // Body without model and temperature (they are now explicit fields)
             val bodyWithoutModelTemp = existingLlm.customRequest.body.filterKeys {
-                it != "model" && it != "temperature" && it != "stream"
+                if (isYyModel) {
+                    it != "model" && it != "temperature"
+                } else {
+                    it != "model" && it != "temperature" && it != "stream"
+                }
             }
             val bodyJson = if (bodyWithoutModelTemp.isNotEmpty()) {
                 buildJsonObject {
